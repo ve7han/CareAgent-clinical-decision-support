@@ -1,4 +1,3 @@
-[CareAgent_README.md](https://github.com/user-attachments/files/32170333/CareAgent_README.md)
 # CareAgent
 
 **A multi-agent clinical decision support system with explainable AI.**
