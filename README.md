@@ -167,4 +167,4 @@ The most interesting limitation is the closed-set assumption. Framing diagnosis 
 
 MSc group project, Northumbria University London.
 
-My contribution: the orchestrator  the agent pipeline, per-step timing, and the error isolation that keeps a single agent failure from bringing down the run — plus work on the SHAP explainability integration in the diagnostic agent.
+My contribution: the orchestrator  the agent pipeline, per-step timing, and the error isolation that keeps a single agent failure from bringing down the run  plus work on the SHAP explainability integration in the diagnostic agent.
