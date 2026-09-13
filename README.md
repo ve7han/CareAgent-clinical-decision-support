@@ -2,7 +2,7 @@
 
 **A multi-agent clinical decision support system with explainable AI.**
 
-CareAgent takes a patient's vital signs and laboratory results, routes them through four specialist agents, and produces a ranked differential diagnosis, a guideline-based treatment plan, and a clinical summary — with an explanation of *why* each decision was made.
+CareAgent takes a patient's vital signs and laboratory results, routes them through four specialist agents, and produces a ranked differential diagnosis, a guideline-based treatment plan, and a clinical summary with an explanation of *why* each decision was made.
 
 Built as an MSc group project on the AI Technology programme at Northumbria University London.
 
@@ -16,9 +16,9 @@ A model that outputs "Sepsis, 68% confidence" is not clinically useful. A clinic
 
 CareAgent attaches three things to every decision:
 
-- **Attribution** — which specific measurements pushed the model toward this diagnosis, via SHAP
-- **Counterfactuals** — what would have to be different for the answer to change, for example: if lactate had been normal, confidence in sepsis drops and pneumonia becomes the leading diagnosis
-- **A trust score** — an indication of how much weight the output should be given
+- **Attribution**  which specific measurements pushed the model toward this diagnosis, via SHAP
+- **Counterfactuals**  what would have to be different for the answer to change, for example: if lactate had been normal, confidence in sepsis drops and pneumonia becomes the leading diagnosis
+- **A trust score**  an indication of how much weight the output should be given
 
 The goal is a system that supports a clinical decision rather than replacing one.
 
@@ -56,23 +56,23 @@ Each agent has a single responsibility. The orchestrator handles sequencing, rec
 
 ### The agents
 
-**Intake Agent** — turns raw numbers into clinical meaning. Checks 30+ physiological thresholds (tachycardia, severe hypoxia, and so on), flags abnormalities, marks the dangerous ones as red flags, calculates a qSOFA sepsis screening score, and lists comorbidities. Roughly what a triage nurse does on arrival.
+**Intake Agent**  turns raw numbers into clinical meaning. Checks 30+ physiological thresholds (tachycardia, severe hypoxia, and so on), flags abnormalities, marks the dangerous ones as red flags, calculates a qSOFA sepsis screening score, and lists comorbidities. Roughly what a triage nurse does on arrival.
 
-**Diagnostic Agent** — the core ML component. Feeds the structured intake data to a trained XGBoost classifier, which returns probabilities across ten acute conditions. Applies an acuity multiplier so higher-risk diagnoses such as septic shock and stroke are weighted slightly upward, making the system appropriately cautious. Runs SHAP to identify which features drove the top result. Returns a ranked differential of the five most likely conditions.
+**Diagnostic Agent**  the core ML component. Feeds the structured intake data to a trained XGBoost classifier, which returns probabilities across ten acute conditions. Applies an acuity multiplier so higher-risk diagnoses such as septic shock and stroke are weighted slightly upward, making the system appropriately cautious. Runs SHAP to identify which features drove the top result. Returns a ranked differential of the five most likely conditions.
 
-**Treatment Agent** — holds a knowledge base of clinical guidance (NICE, WHO, ESC, Surviving Sepsis Campaign) for all ten conditions. Matches the leading diagnosis to its guideline and personalises it: chronic kidney disease triggers a dose-adjustment warning, age over 75 triggers a frailty assessment flag.
+**Treatment Agent**  holds a knowledge base of clinical guidance (NICE, WHO, ESC, Surviving Sepsis Campaign) for all ten conditions. Matches the leading diagnosis to its guideline and personalises it: chronic kidney disease triggers a dose-adjustment warning, age over 75 triggers a frailty assessment flag.
 
-**Liaison Agent** — produces the human-facing output. Generates a clinical narrative via the Claude API, with a deterministic template fallback so the system runs fully offline when no API key is present. Also produces the counterfactual explanation and trust score.
+**Liaison Agent**  produces the human-facing output. Generates a clinical narrative via the Claude API, with a deterministic template fallback so the system runs fully offline when no API key is present. Also produces the counterfactual explanation and trust score.
 
 ---
 
 ## Tech stack
 
 - **Python**
-- **XGBoost** — multi-class diagnosis ranking over 24 vital-sign and laboratory features
-- **SHAP** — feature attribution for explainability
-- **Flask** — web server and dashboard
-- **Claude API** (Anthropic) — clinical narrative generation, optional
+- **XGBoost**  multi-class diagnosis ranking over 24 vital-sign and laboratory features
+- **SHAP**  feature attribution for explainability
+- **Flask**  web server and dashboard
+- **Claude API** (Anthropic)  clinical narrative generation, optional
 
 ---
 
@@ -143,7 +143,7 @@ MIMIC-III is a critical care database from MIT containing de-identified records 
 
 `data/mimic_simulator.py` generates synthetic patients instead. It encodes the typical vital-sign ranges, laboratory values and comorbidity patterns associated with each of ten conditions, and samples clinically plausible patients from those distributions.
 
-This is a deliberate and clearly bounded limitation. The synthetic data reproduces the statistical shape of real presentations but not their full complexity — no missing values, no measurement noise, no atypical presentations, no comorbidity interactions beyond those explicitly modelled. Reported model performance reflects the simulator, not clinical reality.
+This is a deliberate and clearly bounded limitation. The synthetic data reproduces the statistical shape of real presentations but not their full complexity  no missing values, no measurement noise, no atypical presentations, no comorbidity interactions beyond those explicitly modelled. Reported model performance reflects the simulator, not clinical reality.
 
 ---
 
@@ -159,7 +159,7 @@ This is a deliberate and clearly bounded limitation. The synthetic data reproduc
 
 ## What I would do differently
 
-The most interesting limitation is the closed-set assumption. Framing diagnosis as a choice between ten labels makes the problem tractable and makes SHAP easy to apply, but it means the system is confidently wrong about anything outside its label set rather than expressing uncertainty. An abstention mechanism — returning "insufficient information" rather than a forced ranking — would be more honest and more clinically useful.
+The most interesting limitation is the closed-set assumption. Framing diagnosis as a choice between ten labels makes the problem tractable and makes SHAP easy to apply, but it means the system is confidently wrong about anything outside its label set rather than expressing uncertainty. An abstention mechanism  returning "insufficient information" rather than a forced ranking  would be more honest and more clinically useful.
 
 ---
 
@@ -167,4 +167,4 @@ The most interesting limitation is the closed-set assumption. Framing diagnosis 
 
 MSc group project, Northumbria University London.
 
-My contribution: the orchestrator — the agent pipeline, per-step timing, and the error isolation that keeps a single agent failure from bringing down the run — plus work on the SHAP explainability integration in the diagnostic agent.
+My contribution: the orchestrator  the agent pipeline, per-step timing, and the error isolation that keeps a single agent failure from bringing down the run — plus work on the SHAP explainability integration in the diagnostic agent.
