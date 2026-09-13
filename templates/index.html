@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CareAgent — Clinical Decision Support</title>
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy:    #0B2545;
+      --mid:     #13315C;
+      --sage:    #3D9970;
+      --ice:     #8EA8C3;
+      --amber:   #E8A838;
+      --red:     #C0392B;
+      --light:   #F4F8FB;
+      --white:   #FFFFFF;
+      --text:    #1a1a2e;
+      --muted:   #6b7280;
+      --border:  #DDE3ED;
+      --shadow:  0 2px 12px rgba(11,37,69,0.10);
+      --radius:  10px;
+    }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--light);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ───────────────────────────────────────────────── */
+    header {
+      background: var(--navy);
+      color: white;
+      padding: 0 2rem;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-icon { font-size: 1.6rem; }
+    .logo-text { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.3px; }
+    .logo-sub  { font-size: 0.72rem; color: var(--ice); font-weight: 400; margin-top: -2px; }
+    .badge {
+      background: var(--sage); color: white;
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 0.72rem; font-weight: 600; letter-spacing: 0.5px;
+    }
+
+    /* ── Layout ───────────────────────────────────────────────── */
+    .main { display: grid; grid-template-columns: 400px 1fr; gap: 0; min-height: calc(100vh - 64px); }
+    .panel-left  { background: white; border-right: 1px solid var(--border); overflow-y: auto; height: calc(100vh - 64px); position: sticky; top: 64px; }
+    .panel-right { overflow-y: auto; padding: 1.5rem; }
+
+    /* ── Left Panel ───────────────────────────────────────────── */
+    .panel-section { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); }
+    .panel-section h3 { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 1rem; }
+
+    .demo-btns { display: flex; flex-direction: column; gap: 8px; }
+    .demo-btn {
+      background: var(--light); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 14px; cursor: pointer;
+      display: flex; align-items: center; gap: 10px; transition: all .15s;
+      text-align: left;
+    }
+    .demo-btn:hover { border-color: var(--sage); background: #f0f9f5; }
+    .demo-btn.active { border-color: var(--sage); background: #e8f5ef; }
+    .demo-btn .dbicon { font-size: 1.4rem; }
+    .demo-btn .dbname { font-weight: 600; font-size: 0.88rem; }
+    .demo-btn .dbsub  { font-size: 0.75rem; color: var(--muted); }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group.full { grid-column: 1/-1; }
+    label { font-size: 0.72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    input[type="number"], input[type="text"], select {
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 7px 10px; font-size: 0.88rem; color: var(--text);
+      background: var(--light); transition: border .15s;
+      width: 100%;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--sage); background: white; }
+
+    .checkbox-row { display: flex; align-items: center; gap: 8px; }
+    .checkbox-row input { width: auto; }
+    .checkbox-row label { text-transform: none; font-size: 0.82rem; color: var(--text); letter-spacing: 0; }
+
+    .btn-primary {
+      background: var(--sage); color: white; border: none;
+      border-radius: 8px; padding: 12px 20px; font-size: 0.9rem;
+      font-weight: 700; cursor: pointer; width: 100%; transition: all .15s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-primary:hover { background: #2d7a55; transform: translateY(-1px); }
+    .btn-primary:disabled { background: var(--muted); cursor: not-allowed; transform: none; }
+
+    .btn-secondary {
+      background: transparent; color: var(--navy); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 14px; font-size: 0.82rem;
+      font-weight: 600; cursor: pointer; transition: all .15s;
+    }
+    .btn-secondary:hover { border-color: var(--navy); background: var(--light); }
+
+    /* ── Right Panel ──────────────────────────────────────────── */
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; height: 60vh; gap: 16px; color: var(--muted);
+    }
+    .empty-state .big-icon { font-size: 4rem; opacity: 0.3; }
+    .empty-state h2 { font-size: 1.2rem; color: var(--navy); }
+    .empty-state p  { font-size: 0.88rem; max-width: 340px; text-align: center; }
+
+    /* ── Results ──────────────────────────────────────────────── */
+    .results { display: flex; flex-direction: column; gap: 1.25rem; }
+
+    /* Patient header card */
+    .patient-header {
+      background: var(--navy); color: white;
+      border-radius: var(--radius); padding: 1.25rem 1.5rem;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .patient-header h2 { font-size: 1.1rem; margin-bottom: 4px; }
+    .patient-header p  { font-size: 0.82rem; color: var(--ice); }
+    .pipeline-time { text-align: right; }
+    .pipeline-time .ms { font-size: 1.6rem; font-weight: 700; color: var(--sage); }
+    .pipeline-time .label { font-size: 0.7rem; color: var(--ice); }
+
+    /* Cards */
+    .card {
+      background: white; border-radius: var(--radius);
+      box-shadow: var(--shadow); overflow: hidden;
+    }
+    .card-header {
+      padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-header h3 { font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .card-body { padding: 1.25rem 1.5rem; }
+
+    /* Agent steps */
+    .agent-steps { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+    .agent-step {
+      background: var(--light); border-radius: 8px; padding: 12px;
+      border: 1px solid var(--border); text-align: center;
+    }
+    .agent-step .icon { font-size: 1.5rem; margin-bottom: 6px; }
+    .agent-step .name { font-size: 0.75rem; font-weight: 700; color: var(--navy); }
+    .agent-step .ms   { font-size: 0.7rem; color: var(--muted); margin-top: 3px; }
+    .agent-step.done  { border-color: var(--sage); background: #f0f9f5; }
+
+    /* Flags */
+    .flags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .flag {
+      padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;
+      border: 1px solid transparent;
+    }
+    .flag.high   { background: #fef2f2; color: var(--red);  border-color: #fca5a5; }
+    .flag.normal { background: #f0f9f5; color: var(--sage); border-color: #a7d7c5; }
+
+    /* Vitals grid */
+    .vitals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .vital-cell {
+      background: var(--light); border-radius: 8px; padding: 10px 12px;
+      border: 1px solid var(--border);
+    }
+    .vital-cell .v-label { font-size: 0.68rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .vital-cell .v-value { font-size: 1.15rem; font-weight: 700; color: var(--navy); margin: 2px 0; }
+    .vital-cell .v-unit  { font-size: 0.68rem; color: var(--muted); }
+    .vital-cell.abnormal { border-color: var(--amber); background: #fffbeb; }
+    .vital-cell.critical { border-color: var(--red);   background: #fef2f2; }
+
+    /* Differentials */
+    .diff-list { display: flex; flex-direction: column; gap: 10px; }
+    .diff-item {
+      border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px;
+      display: grid; grid-template-columns: 1fr auto; gap: 4px; align-items: center;
+    }
+    .diff-item.top { border-color: var(--sage); background: #f0f9f5; }
+    .diff-name  { font-weight: 700; font-size: 0.9rem; }
+    .diff-sub   { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+    .diff-badge {
+      background: var(--navy); color: white;
+      padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700;
+    }
+    .diff-bar-wrap { grid-column: 1/-1; height: 5px; background: var(--border); border-radius: 3px; margin-top: 4px; }
+    .diff-bar { height: 100%; border-radius: 3px; background: var(--sage); transition: width .5s; }
+
+    /* SHAP chart */
+    .shap-chart { display: flex; flex-direction: column; gap: 8px; }
+    .shap-row { display: grid; grid-template-columns: 140px 1fr 60px; gap: 8px; align-items: center; }
+    .shap-label { font-size: 0.78rem; font-weight: 600; text-align: right; color: var(--navy); }
+    .shap-bar-wrap { height: 20px; background: var(--light); border-radius: 4px; overflow: hidden; position: relative; border: 1px solid var(--border); }
+    .shap-bar { height: 100%; position: absolute; border-radius: 3px; transition: width .6s, left .6s; }
+    .shap-bar.pos { background: var(--sage);  left: 50%; }
+    .shap-bar.neg { background: var(--red);   right: 50%; left: auto; }
+    .shap-val  { font-size: 0.75rem; font-weight: 700; text-align: right; }
+    .shap-val.pos { color: var(--sage); }
+    .shap-val.neg { color: var(--red);  }
+    .shap-midline { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--muted); opacity: 0.4; }
+
+    /* Treatment */
+    .time-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #fef3c7; color: #92400e;
+      padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 700;
+      border: 1px solid #fcd34d; margin-bottom: 1rem;
+    }
+    .tx-section { margin-bottom: 1rem; }
+    .tx-section h4 { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 8px; }
+    .tx-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .tx-list li { display: flex; gap: 8px; font-size: 0.85rem; align-items: flex-start; }
+    .tx-list li::before { content: '→'; color: var(--sage); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+    .tx-list.immediate li::before { content: '⚡'; }
+    .tx-note {
+      background: #fffbeb; border: 1px solid #fcd34d;
+      border-radius: 6px; padding: 8px 12px;
+      font-size: 0.8rem; color: #78350f;
+      display: flex; gap: 8px; align-items: flex-start;
+    }
+
+    /* Narrative */
+    .narrative-box {
+      background: var(--light); border: 1px solid var(--border);
+      border-radius: 8px; padding: 1rem 1.25rem;
+      font-size: 0.88rem; line-height: 1.7; color: var(--text);
+      white-space: pre-wrap;
+    }
+    .counterfactual {
+      background: #f0f4ff; border: 1px solid #c7d2fe;
+      border-radius: 8px; padding: 10px 14px; margin-top: 12px;
+      font-size: 0.82rem; color: #3730a3;
+    }
+    .counterfactual strong { display: block; margin-bottom: 4px; }
+
+    /* Confidence meter */
+    .conf-meter { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .conf-label { font-size: 0.78rem; font-weight: 600; color: var(--muted); min-width: 90px; }
+    .conf-bar-wrap { flex: 1; height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; }
+    .conf-bar { height: 100%; border-radius: 5px; transition: width .6s; }
+    .conf-val { font-size: 0.85rem; font-weight: 700; min-width: 50px; text-align: right; }
+
+    /* Loading */
+    .loading {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 16px; padding: 3rem;
+    }
+    .spinner {
+      width: 44px; height: 44px; border: 4px solid var(--border);
+      border-top-color: var(--sage); border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .qsofa {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;
+    }
+    .qsofa.low  { background: #f0f9f5; color: var(--sage); border: 1px solid #a7d7c5; }
+    .qsofa.med  { background: #fffbeb; color: #92400e;     border: 1px solid #fcd34d; }
+    .qsofa.high { background: #fef2f2; color: var(--red);  border: 1px solid #fca5a5; }
+
+    .guideline-link { font-size: 0.78rem; color: var(--sage); text-decoration: none; }
+    .guideline-link:hover { text-decoration: underline; }
+
+    /* Two-col layout for treatment */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+    .tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 1rem; }
+    .tab {
+      padding: 8px 16px; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px;
+      color: var(--muted); transition: all .15s;
+    }
+    .tab.active { color: var(--navy); border-bottom-color: var(--sage); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="logo-icon">🏥</span>
+    <div>
+      <div class="logo-text">CareAgent</div>
+      <div class="logo-sub">AI Clinical Decision Support · Multi-Agent System</div>
+    </div>
+  </div>
+  <span class="badge">DEMO · NOT FOR CLINICAL USE</span>
+</header>
+
+<div class="main">
+
+  <!-- ── Left Panel ───────────────────────────────────────────── -->
+  <div class="panel-left">
+
+    <div class="panel-section">
+      <h3>Demo Patients</h3>
+      <div class="demo-btns">
+        <button class="demo-btn" onclick="loadDemo('sepsis_classic')">
+          <span class="dbicon">🔴</span>
+          <div><div class="dbname">Septic Patient</div><div class="dbsub">67yr M · Fever, Hypotension, High Lactate</div></div>
+        </button>
+        <button class="demo-btn" onclick="loadDemo('ami_stemi')">
+          <span class="dbicon">💛</span>
+          <div><div class="dbname">Chest Pain · Elevated Troponin</div><div class="dbsub">58yr M · Acute MI presentation</div></div>
+        </button>
+        <button class="demo-btn" onclick="loadDemo('dka_young')">
+          <span class="dbicon">🔵</span>
+          <div><div class="dbname">DKA · Young Diabetic</div><div class="dbsub">24yr F · High Glucose, Kussmaul breathing</div></div>
+        </button>
+        <button class="demo-btn" onclick="loadRandom()">
+          <span class="dbicon">🎲</span>
+          <div><div class="dbname">Random Patient</div><div class="dbsub">Synthetic MIMIC-III case</div></div>
+        </button>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <h3>Patient Data</h3>
+      <div class="form-grid" id="patientForm">
+        <div class="form-group full">
+          <label>Patient ID</label>
+          <input type="text" id="f_patient_id" value="P10042"/>
+        </div>
+        <div class="form-group">
+          <label>Age (yrs)</label>
+          <input type="number" id="f_age" value="67" min="16" max="100"/>
+        </div>
+        <div class="form-group">
+          <label>Sex</label>
+          <select id="f_sex">
+            <option value="M">Male</option>
+            <option value="F">Female</option>
+          </select>
+        </div>
+
+        <div class="form-group"><label>Heart Rate (bpm)</label><input type="number" id="f_heart_rate" step="0.1"/></div>
+        <div class="form-group"><label>Systolic BP (mmHg)</label><input type="number" id="f_systolic_bp" step="0.1"/></div>
+        <div class="form-group"><label>Diastolic BP (mmHg)</label><input type="number" id="f_diastolic_bp" step="0.1"/></div>
+        <div class="form-group"><label>Resp Rate (/min)</label><input type="number" id="f_respiratory_rate" step="0.1"/></div>
+        <div class="form-group"><label>SpO₂ (%)</label><input type="number" id="f_spo2" step="0.1"/></div>
+        <div class="form-group"><label>Temperature (°C)</label><input type="number" id="f_temperature" step="0.1"/></div>
+        <div class="form-group"><label>WBC (×10⁹/L)</label><input type="number" id="f_wbc" step="0.1"/></div>
+        <div class="form-group"><label>Lactate (mmol/L)</label><input type="number" id="f_lactate" step="0.1"/></div>
+        <div class="form-group"><label>Creatinine (mg/dL)</label><input type="number" id="f_creatinine" step="0.01"/></div>
+        <div class="form-group"><label>Troponin (ng/mL)</label><input type="number" id="f_troponin" step="0.001"/></div>
+        <div class="form-group"><label>CRP (mg/L)</label><input type="number" id="f_crp" step="0.1"/></div>
+        <div class="form-group"><label>Sodium (mmol/L)</label><input type="number" id="f_sodium" step="0.1"/></div>
+        <div class="form-group"><label>Potassium (mmol/L)</label><input type="number" id="f_potassium" step="0.01"/></div>
+        <div class="form-group"><label>Glucose (mmol/L)</label><input type="number" id="f_glucose" step="0.1"/></div>
+        <div class="form-group"><label>Haemoglobin (g/dL)</label><input type="number" id="f_haemoglobin" step="0.1"/></div>
+        <div class="form-group"><label>Platelets (×10⁹/L)</label><input type="number" id="f_platelets" step="1"/></div>
+        <div class="form-group"><label>ALT (U/L)</label><input type="number" id="f_alt" step="0.1"/></div>
+        <div class="form-group"><label>Bilirubin (mg/dL)</label><input type="number" id="f_bilirubin" step="0.01"/></div>
+
+        <div class="form-group full"><label style="margin-bottom:8px;">Comorbidities</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <label class="checkbox-row"><input type="checkbox" id="f_diabetes"/> Diabetes</label>
+            <label class="checkbox-row"><input type="checkbox" id="f_hypertension"/> Hypertension</label>
+            <label class="checkbox-row"><input type="checkbox" id="f_ckd"/> CKD</label>
+            <label class="checkbox-row"><input type="checkbox" id="f_cad"/> CAD</label>
+            <label class="checkbox-row"><input type="checkbox" id="f_recent_infection"/> Recent Infection</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <button class="btn-primary" id="analyseBtn" onclick="analyse()">
+        <span>🔍</span> Run CareAgent Pipeline
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Right Panel ──────────────────────────────────────────── -->
+  <div class="panel-right" id="rightPanel">
+    <div class="empty-state">
+      <div class="big-icon">🏥</div>
+      <h2>CareAgent ready</h2>
+      <p>Select a demo patient or enter clinical data, then click <strong>Run CareAgent Pipeline</strong> to generate an AI-assisted clinical decision support report.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Field mapping ─────────────────────────────────────────────────────────
+const FIELDS = [
+  'patient_id','age','sex','heart_rate','systolic_bp','diastolic_bp',
+  'respiratory_rate','spo2','temperature','wbc','lactate','creatinine',
+  'troponin','crp','sodium','potassium','glucose','haemoglobin','platelets',
+  'alt','bilirubin','diabetes','hypertension','ckd','cad','recent_infection'
+];
+const CHECKBOX = ['diabetes','hypertension','ckd','cad','recent_infection'];
+
+function getFormData() {
+  const d = {};
+  FIELDS.forEach(f => {
+    const el = document.getElementById('f_' + f);
+    if (!el) return;
+    if (CHECKBOX.includes(f)) d[f] = el.checked ? 1 : 0;
+    else d[f] = el.value;
+  });
+  return d;
+}
+
+function setFormData(data) {
+  FIELDS.forEach(f => {
+    const el = document.getElementById('f_' + f);
+    if (!el || data[f] === undefined) return;
+    if (CHECKBOX.includes(f)) el.checked = !!data[f];
+    else el.value = data[f];
+  });
+}
+
+async function loadDemo(name) {
+  document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  const res = await fetch(`/api/demo/${name}`);
+  const data = await res.json();
+  setFormData(data);
+}
+
+async function loadRandom() {
+  document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  const res = await fetch('/api/random');
+  const data = await res.json();
+  setFormData(data);
+}
+
+// ── Analyse ──────────────────────────────────────────────────────────────
+async function analyse() {
+  const btn = document.getElementById('analyseBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:3px;display:inline-block;"></span> Analysing…';
+
+  const panel = document.getElementById('rightPanel');
+  panel.innerHTML = `<div class="loading"><div class="spinner"></div><p style="color:var(--muted);font-size:.9rem">Running agent pipeline…</p></div>`;
+
+  try {
+    const res = await fetch('/api/analyse', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ patient: getFormData(), use_llm: false })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    renderResults(data);
+  } catch(e) {
+    panel.innerHTML = `<div class="empty-state"><div class="big-icon">⚠️</div><h2>Error</h2><p>${e.message}</p></div>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span>🔍</span> Run CareAgent Pipeline';
+  }
+}
+
+// ── Render ───────────────────────────────────────────────────────────────
+function renderResults(data) {
+  const { intake, diagnostic, treatment, liaison, pipeline_ms } = data;
+  const panel = document.getElementById('rightPanel');
+
+  const qsofaClass = intake.qsofa_score >= 2 ? 'high' : intake.qsofa_score === 1 ? 'med' : 'low';
+  const qsofaLabel = intake.qsofa_score >= 2 ? '⚠ Sepsis risk' : intake.qsofa_score === 1 ? 'Monitor' : 'Low risk';
+
+  panel.innerHTML = `<div class="results">
+
+    <!-- Patient Header -->
+    <div class="patient-header">
+      <div>
+        <h2>Patient ${intake.patient_id} — ${intake.age}yr ${intake.sex}</h2>
+        <p>
+          ${intake.comorbidities.length ? intake.comorbidities.join(' · ') : 'No comorbidities documented'} &nbsp;·&nbsp;
+          <span class="qsofa ${qsofaClass}">qSOFA ${intake.qsofa_score}/3 · ${qsofaLabel}</span>
+        </p>
+      </div>
+      <div class="pipeline-time">
+        <div class="ms">${pipeline_ms}ms</div>
+        <div class="label">Pipeline Total</div>
+      </div>
+    </div>
+
+    <!-- Agent Steps -->
+    <div class="card">
+      <div class="card-header"><h3>🤖 Agent Pipeline</h3></div>
+      <div class="card-body">
+        <div class="agent-steps">
+          ${[
+            {icon:'📥', name:'Patient Intake',     ms: intake.agent_ms},
+            {icon:'🧠', name:'Diagnostic Reasoner',ms: diagnostic.agent_ms},
+            {icon:'📋', name:'Treatment Planner',  ms: treatment.agent_ms},
+            {icon:'💬', name:'Clinician Liaison',  ms: liaison.agent_ms},
+          ].map(a => `
+            <div class="agent-step done">
+              <div class="icon">${a.icon}</div>
+              <div class="name">${a.name}</div>
+              <div class="ms">${a.ms}ms ✓</div>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- Clinical Flags -->
+    <div class="card">
+      <div class="card-header">
+        <h3>🚨 Clinical Flags <span style="color:var(--muted);font-weight:400;font-size:.8rem;margin-left:8px;">${intake.flag_count} detected</span></h3>
+      </div>
+      <div class="card-body">
+        <div class="flags">
+          ${intake.flags.map(f =>
+            `<span class="flag ${f.priority ? 'high' : 'normal'}">${f.priority ? '⚠ ' : ''}${f.flag}</span>`
+          ).join('')}
+          ${intake.flags.length === 0 ? '<span style="color:var(--muted);font-size:.88rem">No significant flags</span>' : ''}
+        </div>
+      </div>
+    </div>
+
+    <!-- Vitals -->
+    <div class="card">
+      <div class="card-header"><h3>📊 Vital Signs & Labs</h3></div>
+      <div class="card-body">
+        <div class="vitals-grid">
+          ${renderVitals(intake.vitals, intake.flags)}
+        </div>
+      </div>
+    </div>
+
+    <!-- Differential & SHAP side by side -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+
+      <!-- Differentials -->
+      <div class="card">
+        <div class="card-header"><h3>🔬 Differential Diagnosis</h3></div>
+        <div class="card-body">
+          <div class="diff-list">
+            ${diagnostic.differentials.map((d,i) => `
+              <div class="diff-item ${i===0?'top':''}">
+                <div>
+                  <div class="diff-name">${i===0?'★ ':''}${d.diagnosis}</div>
+                  <div class="diff-sub">CCS: ${d.ccs.toFixed(3)} · P: ${(d.probability*100).toFixed(1)}% · Acuity ×${d.acuity_multiplier}</div>
+                </div>
+                <div class="diff-badge">${(d.ccs*100).toFixed(0)}%</div>
+                <div class="diff-bar-wrap"><div class="diff-bar" style="width:${d.ccs*100}%"></div></div>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- SHAP -->
+      <div class="card">
+        <div class="card-header">
+          <h3>📈 SHAP Explanation</h3>
+          <span style="font-size:.72rem;color:var(--muted);">Top diagnosis drivers</span>
+        </div>
+        <div class="card-body">
+          ${renderSHAP(diagnostic.top_features.slice(0,8), diagnostic.model_confidence)}
+        </div>
+      </div>
+    </div>
+
+    <!-- Clinician Narrative -->
+    <div class="card">
+      <div class="card-header">
+        <h3>💬 Clinician Summary</h3>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span style="font-size:.72rem;color:var(--muted);">Confidence: ${liaison.confidence}</span>
+          <div class="conf-bar-wrap" style="width:80px;height:8px;background:var(--border);border-radius:4px;overflow:hidden;">
+            <div class="conf-bar" style="width:${liaison.ccs*100}%;background:var(--sage);height:100%;border-radius:4px;"></div>
+          </div>
+          <span style="font-size:.78rem;font-weight:700;color:var(--sage)">${(liaison.ccs*100).toFixed(0)}%</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="narrative-box">${liaison.narrative}</div>
+        <div class="counterfactual">
+          <strong>🔄 Counterfactual Explanation</strong>
+          ${liaison.counterfactual}
+        </div>
+      </div>
+    </div>
+
+    <!-- Treatment -->
+    <div class="card">
+      <div class="card-header">
+        <h3>💊 Treatment Pathway — ${treatment.diagnosis}</h3>
+        ${treatment.time_critical ? '<span style="background:#fef2f2;color:var(--red);padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;border:1px solid #fca5a5;">⚡ TIME CRITICAL</span>' : ''}
+      </div>
+      <div class="card-body">
+        ${treatment.bundle_window ? `<div class="time-badge">⏱ ${treatment.bundle_window}</div>` : ''}
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:1rem;">
+          Guideline: <a class="guideline-link" href="${treatment.source}" target="_blank">${treatment.guideline}</a>
+        </p>
+
+        <div class="tabs" id="txTabs">
+          <div class="tab active" onclick="switchTab(this,'tx-immediate')">Immediate</div>
+          <div class="tab" onclick="switchTab(this,'tx-investigations')">Investigations</div>
+          <div class="tab" onclick="switchTab(this,'tx-treatments')">Treatments</div>
+          <div class="tab" onclick="switchTab(this,'tx-monitoring')">Monitoring</div>
+        </div>
+
+        <div class="tab-content active" id="tx-immediate">
+          <ul class="tx-list immediate">
+            ${treatment.immediate.map(i => `<li>${i}</li>`).join('')}
+          </ul>
+        </div>
+        <div class="tab-content" id="tx-investigations">
+          <ul class="tx-list">
+            ${treatment.investigations.map(i => `<li>${i}</li>`).join('')}
+          </ul>
+        </div>
+        <div class="tab-content" id="tx-treatments">
+          <ul class="tx-list">
+            ${treatment.treatments.map(i => `<li>${i}</li>`).join('')}
+          </ul>
+        </div>
+        <div class="tab-content" id="tx-monitoring">
+          <ul class="tx-list">
+            ${treatment.monitoring.map(i => `<li>${i}</li>`).join('')}
+          </ul>
+          <div style="margin-top:1rem;padding:10px 14px;background:var(--light);border-radius:8px;border:1px solid var(--border);">
+            <span style="font-size:.82rem;font-weight:700;color:var(--navy);">🏥 Disposition: </span>
+            <span style="font-size:.82rem;">${treatment.disposition}</span>
+          </div>
+        </div>
+
+        ${treatment.personalised_notes && treatment.personalised_notes.length ? `
+          <div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem;">
+            <h4 style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:8px;">Personalised Notes</h4>
+            ${treatment.personalised_notes.map(n => `<div class="tx-note">⚠️ ${n}</div>`).join('')}
+          </div>` : ''}
+      </div>
+    </div>
+
+    <!-- Disclaimer -->
+    <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px 16px;font-size:.8rem;color:#7f1d1d;line-height:1.5;">
+      <strong>⚠ Clinical Disclaimer:</strong> CareAgent is a research prototype for academic demonstration. 
+      All outputs are AI-generated and have not been validated for clinical use. 
+      Every clinical decision must be made by a qualified and registered clinician who takes full professional responsibility.
+    </div>
+
+  </div>`;
+}
+
+function renderVitals(vitals, flags) {
+  const flagNames = flags.map(f => f.flag.toLowerCase());
+  const criticalFeats = ['spo2','systolic_bp','lactate','troponin'];
+  const abnormalFeats = ['heart_rate','respiratory_rate','temperature','wbc','creatinine','glucose','potassium'];
+
+  return Object.entries(vitals).map(([k, v]) => {
+    let cls = '';
+    const isCrit   = criticalFeats.includes(k);
+    const isAbnorm = abnormalFeats.includes(k);
+    // Simple threshold-based colouring
+    if (k === 'spo2'        && v.value < 94) cls = v.value < 88 ? 'critical' : 'abnormal';
+    if (k === 'systolic_bp' && v.value < 90) cls = 'critical';
+    if (k === 'lactate'     && v.value > 2)  cls = v.value > 4  ? 'critical' : 'abnormal';
+    if (k === 'troponin'    && v.value > 0.04) cls = v.value > 1 ? 'critical' : 'abnormal';
+    if (k === 'heart_rate'  && (v.value > 100 || v.value < 50)) cls = 'abnormal';
+    if (k === 'temperature' && v.value > 38.3) cls = 'abnormal';
+    if (k === 'wbc'         && (v.value > 12 || v.value < 4))   cls = 'abnormal';
+    if (k === 'glucose'     && v.value > 11) cls = 'abnormal';
+    if (k === 'potassium'   && v.value > 5.5) cls = 'abnormal';
+    return `<div class="vital-cell ${cls}">
+      <div class="v-label">${v.label}</div>
+      <div class="v-value">${v.value}</div>
+      <div class="v-unit">${v.unit}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderSHAP(features, modelConf) {
+  const maxAbs = Math.max(...features.map(f => f.abs_shap), 0.01);
+  return `<div class="shap-chart">
+    ${features.map(f => {
+      const pct = (f.abs_shap / maxAbs) * 45;
+      const isPos = f.shap >= 0;
+      return `<div class="shap-row">
+        <div class="shap-label">${f.label}</div>
+        <div class="shap-bar-wrap">
+          <div class="shap-midline"></div>
+          <div class="shap-bar ${isPos?'pos':'neg'}" style="width:${pct}%"></div>
+        </div>
+        <div class="shap-val ${isPos?'pos':'neg'}">${f.shap >= 0 ? '+' : ''}${f.shap.toFixed(3)}</div>
+      </div>`;
+    }).join('')}
+    <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:.68rem;color:var(--muted);">
+      <span style="color:var(--red);">◀ Against diagnosis</span>
+      <span style="color:var(--sage);">For diagnosis ▶</span>
+    </div>
+  </div>`;
+}
+
+function switchTab(el, id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(id).classList.add('active');
+}
+
+// Load sepsis demo on first visit
+window.addEventListener('DOMContentLoaded', () => {
+  fetch('/api/demo/sepsis_classic')
+    .then(r => r.json())
+    .then(d => setFormData(d));
+});
+</script>
+</body>
+</html>
